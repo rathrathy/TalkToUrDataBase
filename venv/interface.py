@@ -212,8 +212,6 @@ if __name__ == "__main__":
         except Exception as e:
             print("\n❌ Chart Error:", e)
 
-
-
 # Fetch data
 # for row in results:
 #     print(row)
