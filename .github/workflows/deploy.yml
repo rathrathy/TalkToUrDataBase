@@ -16,6 +16,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest coverage
+
+      - name: Run tests with coverage
+        run: |
+          echo "Running tests..."
+          coverage run -m pytest
+          echo "Generating coverage report..."
+          coverage report -m  # <-- prints coverage directly in log
+
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
@@ -42,4 +60,3 @@ jobs:
             --region asia-south1 \
             --platform managed \
             --allow-unauthenticated
-
