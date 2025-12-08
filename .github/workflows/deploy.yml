@@ -1,4 +1,4 @@
-name: CI/CD to GCP Cloud Run
+name: CI/CD to Cloud Run using GHCR
 
 on:
   push:
@@ -10,12 +10,12 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/talktourdatabase:latest
       GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -29,11 +29,21 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          echo "Running tests..."
           coverage run -m pytest
-          echo "Generating coverage report..."
-          coverage report -m  # <-- prints coverage directly in log
+          coverage report -m
 
+      # --- GHCR LOGIN ---
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      # --- BUILD & PUSH IMAGE TO GHCR ---
+      - name: Build Docker image
+        run: docker build -t $IMAGE .
+
+      - name: Push Docker image
+        run: docker push $IMAGE
+
+      # --- GOOGLE CLOUD AUTH ---
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
@@ -44,19 +54,11 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      - name: Configure Docker
-        run: gcloud auth configure-docker gcr.io
-
-      - name: Build Docker image
-        run: docker build -t gcr.io/$GCP_PROJECT_ID/talktourdatabase .
-
-      - name: Push Docker image
-        run: docker push gcr.io/$GCP_PROJECT_ID/talktourdatabase
-
+      # --- DEPLOY TO CLOUD RUN USING GHCR ---
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy talktourdatabase \
-            --image gcr.io/$GCP_PROJECT_ID/talktourdatabase \
+            --image $IMAGE \
             --region asia-south1 \
             --platform managed \
             --allow-unauthenticated
